@@ -1,0 +1,33 @@
+#!/usr/bin/python3
+import argparse
+import os
+import pathlib
+import subprocess
+import tempfile
+
+parser = argparse.ArgumentParser(
+    prog='git tmp',
+    description='Checkout a clean copy into a temporary directory.',
+)
+
+parser.add_argument('-n', '--no-git', action='store_true',
+    help='get a completely clean copy, no .git file')
+
+args = parser.parse_args()
+
+path = pathlib.Path(tempfile.mkdtemp())
+subprocess.run(['git', 'worktree', 'add', '--detach', path], stdin=subprocess.DEVNULL, check=True)
+
+if args.no_git:
+    git_content = (path/'.git').read_bytes()
+    (path/'.git').unlink()
+
+print(f'You are now at: {path}')
+print('This directory will be removed if not changed when exiting this shell.')
+subprocess.run([os.environ['SHELL']], cwd=path)
+
+if args.no_git:
+    if not (path/'.git').exists():
+        (path/'.git').write_bytes(git_content)
+
+subprocess.run(['git', 'worktree', 'remove', path], stdin=subprocess.DEVNULL)
